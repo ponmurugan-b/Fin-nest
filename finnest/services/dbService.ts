@@ -1,7 +1,7 @@
 import { User, Wallet, Transaction, SavingsGoal, Category } from '../types';
 import { DEFAULT_CATEGORIES } from '../constants';
 import { pool } from '../lib/dbClient';
-import { hashPassword, verifyPassword, generateVerificationToken } from './emailService';
+import { hashPassword, verifyPassword } from './emailService';
 
 export const dbService = {
   auth: {
@@ -23,10 +23,6 @@ export const dbService = {
           return { user: null, error: { message: "Invalid email or password" } };
         }
         
-        if (!user.email_verified) {
-          return { user: null, error: { message: "Please verify your email before signing in" }, needsVerification: true };
-        }
-        
         // Return user without password_hash
         const { password_hash, ...safeUser } = user;
         return { user: safeUser as User, error: null };
@@ -40,14 +36,12 @@ export const dbService = {
       try {
         const id = crypto.randomUUID();
         const passwordHash = await hashPassword(password);
-        const verificationToken = generateVerificationToken();
-        const tokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
         
         const result = await pool.query(
-          `INSERT INTO users (id, email, password_hash, name, email_verified, verification_token, verification_token_expires) 
-           VALUES ($1, $2, $3, $4, $5, $6, $7) 
-           RETURNING id, email, name, phone, profile_pic, email_verified, verification_token`,
-          [id, email, passwordHash, name || null, false, verificationToken, tokenExpires]
+          `INSERT INTO users (id, email, password_hash, name, email_verified) 
+           VALUES ($1, $2, $3, $4, $5) 
+           RETURNING id, email, name, phone, profile_pic, email_verified`,
+          [id, email, passwordHash, name || null, true]
         );
         
         const user = result.rows[0];
@@ -58,7 +52,6 @@ export const dbService = {
             name: user.name,
             email_verified: user.email_verified 
           } as User, 
-          verificationToken: user.verification_token,
           error: null 
         };
       } catch (err: any) {
@@ -66,49 +59,6 @@ export const dbService = {
           return { user: null, error: { message: "An account with this email already exists" } };
         }
         return { user: null, error: err };
-      }
-    },
-    
-    verifyEmail: async (token: string) => {
-      try {
-        const result = await pool.query(
-          `UPDATE users 
-           SET email_verified = true, verification_token = NULL, verification_token_expires = NULL 
-           WHERE verification_token = $1 AND verification_token_expires > NOW()
-           RETURNING id, email, name, phone, profile_pic, email_verified`,
-          [token]
-        );
-        
-        if (result.rows.length === 0) {
-          return { success: false, error: { message: "Invalid or expired verification link" } };
-        }
-        
-        return { success: true, user: result.rows[0] as User, error: null };
-      } catch (err: any) {
-        return { success: false, error: err };
-      }
-    },
-    
-    resendVerification: async (email: string) => {
-      try {
-        const verificationToken = generateVerificationToken();
-        const tokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
-        
-        const result = await pool.query(
-          `UPDATE users 
-           SET verification_token = $1, verification_token_expires = $2 
-           WHERE email = $3 AND email_verified = false
-           RETURNING id, email`,
-          [verificationToken, tokenExpires, email]
-        );
-        
-        if (result.rows.length === 0) {
-          return { success: false, error: { message: "Email not found or already verified" } };
-        }
-        
-        return { success: true, verificationToken, error: null };
-      } catch (err: any) {
-        return { success: false, error: err };
       }
     },
     
