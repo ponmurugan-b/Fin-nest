@@ -1,0 +1,5 @@
+{
+  "name": "FinNest",
+  "description": "A mobile-first personal finance tracker with multi-wallet support, savings goals, and comprehensive analytics. Features a PWA-ready architecture.",
+  "requestFramePermissions": []
+}
