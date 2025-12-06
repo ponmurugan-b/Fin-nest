@@ -171,6 +171,44 @@ export const dbService = {
       }
     },
     
+    // Transfer between wallets
+    transferBetweenWallets: async (fromWalletId: string, toWalletId: string, amount: number, userId: string, notes?: string) => {
+      try {
+        // Deduct from source wallet
+        await pool.query(
+          `UPDATE wallets SET balance = balance - $1 WHERE id = $2 AND user_id = $3`,
+          [amount, fromWalletId, userId]
+        );
+        
+        // Add to destination wallet
+        await pool.query(
+          `UPDATE wallets SET balance = balance + $1 WHERE id = $2 AND user_id = $3`,
+          [amount, toWalletId, userId]
+        );
+        
+        // Create transfer-out transaction
+        const transferOutId = crypto.randomUUID();
+        await pool.query(
+          `INSERT INTO transactions (id, user_id, wallet_id, amount, category_id, type, date, notes) 
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+          [transferOutId, userId, fromWalletId, amount, 'transfer', 'expense', new Date().toISOString(), `Transfer out: ${notes || 'Wallet transfer'}`]
+        );
+        
+        // Create transfer-in transaction
+        const transferInId = crypto.randomUUID();
+        await pool.query(
+          `INSERT INTO transactions (id, user_id, wallet_id, amount, category_id, type, date, notes) 
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+          [transferInId, userId, toWalletId, amount, 'transfer', 'income', new Date().toISOString(), `Transfer in: ${notes || 'Wallet transfer'}`]
+        );
+        
+        return { success: true };
+      } catch (e) {
+        console.error(e);
+        return { success: false, error: e };
+      }
+    },
+    
     getTransactions: async (userId: string): Promise<Transaction[]> => {
       try {
         const { rows } = await pool.query('SELECT * FROM transactions WHERE user_id = $1 ORDER BY date DESC', [userId]);
