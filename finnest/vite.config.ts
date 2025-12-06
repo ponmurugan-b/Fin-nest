@@ -15,12 +15,21 @@ export default defineConfig(({ mode }) => {
       build: {
         outDir: 'dist',
         sourcemap: false,
-        chunkSizeWarningLimit: 1000,
+        minify: 'terser',
+        terserOptions: {
+          compress: {
+            drop_console: true,
+            drop_debugger: true,
+          },
+        },
+        chunkSizeWarningLimit: 500,
         rollupOptions: {
           output: {
             manualChunks: {
-              vendor: ['react', 'react-dom', 'react-router-dom'],
-              charts: ['recharts'],
+              'vendor-react': ['react', 'react-dom'],
+              'vendor-router': ['react-router-dom'],
+              'vendor-charts': ['recharts'],
+              'vendor-db': ['@neondatabase/serverless'],
             }
           }
         }
@@ -29,6 +38,9 @@ export default defineConfig(({ mode }) => {
         alias: {
           '@': path.resolve(__dirname, '.'),
         }
+      },
+      css: {
+        postcss: './postcss.config.js',
       }
     };
 });
