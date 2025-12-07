@@ -56,86 +56,99 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
   };
 
   return (
-    <div className="min-h-screen bg-emerald-500 flex items-center justify-center p-4">
-      <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl p-8 md:p-12">
+    <div className="min-h-screen bg-gradient-to-br from-emerald-500 to-emerald-600 flex flex-col justify-center items-center p-4">
+      <div className="bg-white w-full max-w-md rounded-2xl shadow-xl p-8 md:p-10">
+        {/* Logo/Title */}
         <div className="text-center mb-8">
-          <div className="bg-emerald-100 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 transform rotate-3">
+          <div className="bg-emerald-100 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-sm">
              <span className="text-emerald-600 font-bold text-3xl">F</span>
           </div>
           <h1 className="text-3xl font-bold text-slate-900">FinNest</h1>
-          <p className="text-slate-500 mt-2">Your personal finance sanctuary.</p>
+          <p className="text-slate-500 mt-2 text-sm">Your personal finance sanctuary.</p>
         </div>
 
-        <form onSubmit={isLogin ? handleSignIn : handleSignUp} className="space-y-4">
+        <form onSubmit={isLogin ? handleSignIn : handleSignUp} className="space-y-5">
+          {/* Error Message */}
           {error && (
-            <div className="p-3 rounded-xl bg-rose-50 text-rose-600 text-sm text-center font-medium">
+            <div className="p-3 rounded-lg bg-rose-50 text-rose-600 text-sm text-center font-medium border border-rose-100">
               {error}
             </div>
           )}
           
+          {/* Name Field (Sign Up only) */}
           {!isLogin && (
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">Your Name</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">Your Name</label>
               <input 
                 type="text" 
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-emerald-500 focus:ring-emerald-500 outline-none transition-all"
+                className="w-full py-2.5 px-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all placeholder:text-slate-400"
                 placeholder="John Doe"
               />
             </div>
           )}
           
+          {/* Email Field */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">Email Address</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">Email Address</label>
             <input 
               type="email" 
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-emerald-500 focus:ring-emerald-500 outline-none transition-all"
+              className="w-full py-2.5 px-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all placeholder:text-slate-400"
               placeholder="you@example.com"
               required
             />
           </div>
           
+          {/* Password Field */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">Password</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">Password</label>
             <input 
               type="password" 
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-emerald-500 focus:ring-emerald-500 outline-none transition-all"
+              className="w-full py-2.5 px-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all placeholder:text-slate-400"
               placeholder="••••••••"
               minLength={6}
               required
             />
           </div>
 
+          {/* Submit Button */}
           <button 
             type="submit" 
             disabled={loading}
-            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-4 rounded-xl transition-all shadow-lg shadow-emerald-500/30 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed mt-4"
+            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 rounded-lg transition-all shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed mt-6"
           >
             {loading ? (
-              <span>Processing...</span>
+              <div className="flex items-center gap-2">
+                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                <span>Processing...</span>
+              </div>
             ) : (
               <>
-                {isLogin ? <LogIn size={20} /> : <UserPlus size={20} />}
+                {isLogin ? <LogIn size={18} /> : <UserPlus size={18} />}
                 <span>{isLogin ? 'Enter Nest' : 'Create Account'}</span>
               </>
             )}
           </button>
         </form>
 
+        {/* Toggle Sign In / Sign Up */}
         <div className="mt-6 text-center">
           <button 
             onClick={() => { setIsLogin(!isLogin); setError(null); }}
-            className="text-slate-500 hover:text-emerald-600 text-sm font-medium transition-colors"
+            className="text-slate-500 hover:text-emerald-600 text-sm font-medium transition-colors focus:outline-none focus:underline"
           >
             {isLogin ? "Need an account? Sign Up" : "Already have an account? Sign In"}
           </button>
         </div>
       </div>
+      
+      {/* Footer */}
+      <p className="mt-6 text-emerald-100 text-xs">© 2025 FinNest. All rights reserved.</p>
     </div>
   );
 };
