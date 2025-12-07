@@ -25,11 +25,27 @@ export default defineConfig(({ mode }) => {
         chunkSizeWarningLimit: 500,
         rollupOptions: {
           output: {
-            manualChunks: {
-              'vendor-react': ['react', 'react-dom'],
-              'vendor-router': ['react-router-dom'],
-              'vendor-charts': ['recharts'],
-              'vendor-db': ['@neondatabase/serverless'],
+            manualChunks(id) {
+              // Core React - loads first
+              if (id.includes('node_modules/react/') || id.includes('node_modules/react-dom/')) {
+                return 'vendor-react';
+              }
+              // Router - loads with app
+              if (id.includes('react-router')) {
+                return 'vendor-router';
+              }
+              // Charts - lazy loaded only on Reports page
+              if (id.includes('recharts') || id.includes('d3-')) {
+                return 'vendor-charts';
+              }
+              // DB - needed for auth
+              if (id.includes('@neondatabase')) {
+                return 'vendor-db';
+              }
+              // Lucide icons
+              if (id.includes('lucide-react')) {
+                return 'vendor-icons';
+              }
             }
           }
         }

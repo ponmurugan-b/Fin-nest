@@ -1,19 +1,28 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { HashRouter as Router, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
 import { LayoutDashboard, Wallet, Receipt, Target, PieChart, LogOut, User as UserIcon } from 'lucide-react';
 import { dbService } from './services/dbService';
 import { User } from './types';
 import { DataProvider } from './contexts/DataContext';
 
-// Components
-import Dashboard from './components/Dashboard';
-import Wallets from './components/Wallets';
-import Transactions from './components/Transactions';
-import Savings from './components/Savings';
-import Reports from './components/Reports';
+// Lazy load components for better performance
+const Dashboard = lazy(() => import('./components/Dashboard'));
+const Wallets = lazy(() => import('./components/Wallets'));
+const Transactions = lazy(() => import('./components/Transactions'));
+const Savings = lazy(() => import('./components/Savings'));
+const Reports = lazy(() => import('./components/Reports'));
+const Profile = lazy(() => import('./components/Profile'));
+
+// Auth loads immediately (first screen)
 import Auth from './components/Auth';
-import Profile from './components/Profile';
+
+// Loading spinner component
+const PageLoader = () => (
+  <div className="flex items-center justify-center h-64">
+    <div className="w-8 h-8 border-4 border-emerald-200 border-t-emerald-600 rounded-full animate-spin"></div>
+  </div>
+);
 
 const Navigation: React.FC<{ onLogout: () => void; user: User; onProfileClick: () => void }> = ({ onLogout, user, onProfileClick }) => {
   const location = useLocation();
@@ -186,23 +195,27 @@ export default function App() {
           <Navigation onLogout={handleLogout} user={user} onProfileClick={() => setShowProfile(true)} />
           {/* Added pb-20 to allow space for bottom nav on mobile */}
           <main className="flex-1 md:ml-64 p-4 md:p-8 pt-20 md:pt-8 pb-24 md:pb-8 overflow-y-auto min-h-screen">
-            <Routes>
-              <Route path="/" element={<Dashboard user={user} />} />
-              <Route path="/wallets" element={<Wallets user={user} />} />
-              <Route path="/transactions" element={<Transactions user={user} />} />
-              <Route path="/savings" element={<Savings user={user} />} />
-              <Route path="/reports" element={<Reports user={user} />} />
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
+            <Suspense fallback={<PageLoader />}>
+              <Routes>
+                <Route path="/" element={<Dashboard user={user} />} />
+                <Route path="/wallets" element={<Wallets user={user} />} />
+                <Route path="/transactions" element={<Transactions user={user} />} />
+                <Route path="/savings" element={<Savings user={user} />} />
+                <Route path="/reports" element={<Reports user={user} />} />
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </Suspense>
           </main>
           
           {/* Profile Modal */}
           {showProfile && (
-            <Profile 
-              user={user} 
-              onUserUpdate={handleUserUpdate} 
-              onClose={() => setShowProfile(false)} 
-            />
+            <Suspense fallback={<PageLoader />}>
+              <Profile 
+                user={user} 
+                onUserUpdate={handleUserUpdate} 
+                onClose={() => setShowProfile(false)} 
+              />
+            </Suspense>
           )}
         </div>
       </DataProvider>
