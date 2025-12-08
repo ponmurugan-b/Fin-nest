@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { LogIn, UserPlus } from 'lucide-react';
+import { LogIn, UserPlus, Trash2, RefreshCw } from 'lucide-react';
 import { dbService } from '../services/dbService';
 import { User } from '../types';
+import { clearAllAppData, getAppVersion } from '../utils/cacheManager';
 
 interface AuthProps {
   onLogin: (user: User) => void;
@@ -71,7 +72,19 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
           {/* Error Message */}
           {error && (
             <div className="p-3 rounded-lg bg-rose-50 text-rose-600 text-sm text-center font-medium border border-rose-100">
-              {error}
+              <p>{error}</p>
+              <button
+                type="button"
+                onClick={() => {
+                  clearAllAppData();
+                  setError(null);
+                  window.location.reload();
+                }}
+                className="mt-2 text-xs text-rose-500 hover:text-rose-700 underline flex items-center justify-center gap-1 mx-auto"
+              >
+                <RefreshCw size={12} />
+                Clear & Retry
+              </button>
             </div>
           )}
           
@@ -149,6 +162,23 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
       
       {/* Footer */}
       <p className="mt-6 text-emerald-100 text-xs">© 2025 FinNest. All rights reserved.</p>
+      
+      {/* Clear Cache Button */}
+      <button
+        onClick={() => {
+          if (confirm('This will clear all app data and log you out. Continue?')) {
+            clearAllAppData();
+            window.location.reload();
+          }
+        }}
+        className="mt-4 text-emerald-200 hover:text-white text-xs flex items-center gap-1 opacity-70 hover:opacity-100 transition-opacity"
+      >
+        <Trash2 size={12} />
+        Clear App Data
+      </button>
+      
+      {/* Version */}
+      <p className="mt-2 text-emerald-200/50 text-[10px]">v{getAppVersion()}</p>
     </div>
   );
 };

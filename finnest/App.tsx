@@ -5,6 +5,7 @@ import { LayoutDashboard, Wallet, Receipt, Target, PieChart, LogOut, User as Use
 import { dbService } from './services/dbService';
 import { User } from './types';
 import { DataProvider } from './contexts/DataContext';
+import { initializeCacheManager, clearAllAppData, setAppVersion } from './utils/cacheManager';
 
 // Lazy load components for better performance
 const Dashboard = lazy(() => import('./components/Dashboard'));
@@ -144,26 +145,38 @@ export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [showProfile, setShowProfile] = useState(false);
+  const [initError, setInitError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Check local storage for session and verify user still exists
-    const checkUser = async () => {
-      const storedUser = localStorage.getItem('finnest_user');
-      if (storedUser) {
-        const parsedUser = JSON.parse(storedUser);
-        // Verify user exists in database
-        const dbUser = await dbService.auth.getUser(parsedUser.id);
-        if (dbUser) {
-          setUser(dbUser);
+    // Initialize cache manager and check user session
+    const initializeApp = async () => {
+      try {
+        const storedUser = localStorage.getItem('finnest_user');
+        if (storedUser) {
+          const parsedUser = JSON.parse(storedUser);
+          // Verify user exists in database
+          const dbUser = await dbService.auth.getUser(parsedUser.id);
+          if (dbUser) {
+            setUser(dbUser);
+            setAppVersion();
+          } else {
+            // User doesn't exist in DB anymore, clear localStorage
+            clearAllAppData();
+            console.log('[App] Session expired - user no longer exists in database');
+          }
         } else {
-          // User doesn't exist in DB anymore, clear localStorage
-          localStorage.removeItem('finnest_user');
-          console.log('Session expired - user no longer exists in database');
+          setAppVersion();
         }
+      } catch (error: any) {
+        console.error('[App] Initialization error:', error);
+        setInitError(error.message || 'Failed to connect to database');
+        // Clear corrupted data on error
+        clearAllAppData();
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
-    checkUser();
+    initializeApp();
   }, []);
 
   const handleLogin = (userData: User) => {
@@ -183,6 +196,30 @@ export default function App() {
   };
 
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-gray-50 text-emerald-600 font-bold animate-pulse">Connecting to Nest...</div>;
+
+  // Show error screen if initialization failed
+  if (initError) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 p-4">
+        <div className="bg-white rounded-2xl shadow-lg p-8 max-w-md w-full text-center">
+          <div className="w-16 h-16 bg-rose-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <span className="text-rose-500 text-2xl">!</span>
+          </div>
+          <h2 className="text-xl font-bold text-slate-800 mb-2">Connection Error</h2>
+          <p className="text-slate-500 mb-6 text-sm">{initError}</p>
+          <button
+            onClick={() => {
+              clearAllAppData();
+              window.location.reload();
+            }}
+            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 rounded-lg transition-all"
+          >
+            Clear Cache & Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (!user) {
     return <Auth onLogin={handleLogin} />;
