@@ -150,17 +150,21 @@ export default function App() {
   useEffect(() => {
     // Initialize app with timeout protection
     const initializeApp = async () => {
-      // First, run synchronous cache check
-      initializeCacheManager();
+      try {
+        // First, run synchronous cache check
+        initializeCacheManager();
+      } catch (e) {
+        console.warn('[App] Cache manager error:', e);
+      }
       
       try {
         const storedUser = localStorage.getItem('finnest_user');
         if (storedUser) {
           const parsedUser = JSON.parse(storedUser);
           
-          // Add timeout to database check (5 seconds)
+          // Add timeout to database check (15 seconds for cold start)
           const timeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Connection timeout')), 5000)
+            setTimeout(() => reject(new Error('Connection timeout')), 15000)
           );
           
           try {
