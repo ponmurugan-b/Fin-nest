@@ -4,24 +4,6 @@ const APP_VERSION = '1.0.0';
 const VERSION_KEY = 'finnest_version';
 const SESSION_KEY = 'finnest_user';
 
-export interface CacheStatus {
-  hasSession: boolean;
-  isVersionMismatch: boolean;
-  sessionData: any;
-}
-
-// Check current cache status
-export const getCacheStatus = (): CacheStatus => {
-  const storedVersion = localStorage.getItem(VERSION_KEY);
-  const sessionData = localStorage.getItem(SESSION_KEY);
-  
-  return {
-    hasSession: !!sessionData,
-    isVersionMismatch: storedVersion !== APP_VERSION,
-    sessionData: sessionData ? JSON.parse(sessionData) : null
-  };
-};
-
 // Clear all app data from localStorage
 export const clearAllAppData = (): void => {
   const keysToRemove = [
@@ -38,7 +20,8 @@ export const clearAllAppData = (): void => {
   });
   
   // Also clear any other finnest-related keys
-  Object.keys(localStorage).forEach(key => {
+  const allKeys = Object.keys(localStorage);
+  allKeys.forEach(key => {
     if (key.startsWith('finnest_')) {
       localStorage.removeItem(key);
     }
@@ -52,53 +35,35 @@ export const setAppVersion = (): void => {
   localStorage.setItem(VERSION_KEY, APP_VERSION);
 };
 
-// Validate session - check if user exists in database
-export const validateSession = async (userId: string, dbService: any): Promise<boolean> => {
-  try {
-    const user = await dbService.getUserById(userId);
-    return !!user;
-  } catch (error) {
-    console.error('[CacheManager] Session validation failed:', error);
-    return false;
+// Check if version changed and clear cache if needed (synchronous)
+export const checkVersionAndClearIfNeeded = (): boolean => {
+  const storedVersion = localStorage.getItem(VERSION_KEY);
+  if (storedVersion !== APP_VERSION) {
+    console.log('[CacheManager] Version mismatch, clearing cache');
+    clearAllAppData();
+    setAppVersion();
+    return true; // Cache was cleared
   }
+  return false;
 };
 
-// Initialize cache manager - call on app start
-export const initializeCacheManager = async (dbService: any): Promise<{ valid: boolean; userId?: string }> => {
-  const status = getCacheStatus();
-  
-  // If version mismatch, clear cache
-  if (status.isVersionMismatch && status.hasSession) {
-    console.log('[CacheManager] Version mismatch detected, clearing cache');
-    clearAllAppData();
-    setAppVersion();
-    return { valid: false };
-  }
-  
-  // If no session, just set version
-  if (!status.hasSession) {
-    setAppVersion();
-    return { valid: false };
-  }
-  
-  // Validate existing session
+// Simple synchronous initialization - no database calls
+export const initializeCacheManager = (): { cleared: boolean } => {
+  const cleared = checkVersionAndClearIfNeeded();
+  return { cleared };
+};
+
+// Get stored user (synchronous)
+export const getStoredUser = (): any | null => {
   try {
-    const isValid = await validateSession(status.sessionData.id, dbService);
-    if (!isValid) {
-      console.log('[CacheManager] Invalid session detected, clearing cache');
-      clearAllAppData();
-      setAppVersion();
-      return { valid: false };
+    const stored = localStorage.getItem(SESSION_KEY);
+    if (stored) {
+      return JSON.parse(stored);
     }
-    
-    setAppVersion();
-    return { valid: true, userId: status.sessionData.id };
-  } catch (error) {
-    console.error('[CacheManager] Error validating session:', error);
-    clearAllAppData();
-    setAppVersion();
-    return { valid: false };
+  } catch {
+    localStorage.removeItem(SESSION_KEY);
   }
+  return null;
 };
 
 // Get current app version

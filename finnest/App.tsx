@@ -148,34 +148,53 @@ export default function App() {
   const [initError, setInitError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Initialize cache manager and check user session
+    // Initialize app with timeout protection
     const initializeApp = async () => {
+      // First, run synchronous cache check
+      initializeCacheManager();
+      
       try {
         const storedUser = localStorage.getItem('finnest_user');
         if (storedUser) {
           const parsedUser = JSON.parse(storedUser);
-          // Verify user exists in database
-          const dbUser = await dbService.auth.getUser(parsedUser.id);
-          if (dbUser) {
-            setUser(dbUser);
+          
+          // Add timeout to database check (5 seconds)
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Connection timeout')), 5000)
+          );
+          
+          try {
+            const dbUser = await Promise.race([
+              dbService.auth.getUser(parsedUser.id),
+              timeoutPromise
+            ]) as User | null;
+            
+            if (dbUser) {
+              setUser(dbUser);
+              setAppVersion();
+            } else {
+              // User doesn't exist in DB, clear localStorage
+              clearAllAppData();
+              console.log('[App] Session expired - user not found');
+            }
+          } catch (dbError: any) {
+            console.warn('[App] DB check failed, using cached user:', dbError.message);
+            // On timeout/error, still use cached user to allow offline-ish usage
+            setUser(parsedUser);
             setAppVersion();
-          } else {
-            // User doesn't exist in DB anymore, clear localStorage
-            clearAllAppData();
-            console.log('[App] Session expired - user no longer exists in database');
           }
         } else {
           setAppVersion();
         }
       } catch (error: any) {
         console.error('[App] Initialization error:', error);
-        setInitError(error.message || 'Failed to connect to database');
-        // Clear corrupted data on error
+        setInitError(error.message || 'Failed to initialize app');
         clearAllAppData();
       } finally {
         setLoading(false);
       }
     };
+    
     initializeApp();
   }, []);
 
